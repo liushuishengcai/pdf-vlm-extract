@@ -1,12 +1,14 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-"""扫描版 PDF -> 阿里 VLM 智能 Markdown 提取（文字+图表语义）
+"""扫描版 PDF -> VLM 智能 Markdown 提取（文字+图表语义）
 
 用法:
   python pdf_vlm_extract.py "E:\\下载\\book.pdf"
-  python pdf_vlm_extract.py book.pdf -o out_dir --model qwen3.8-max --pages 0-20
+  python pdf_vlm_extract.py book.pdf --model gpt-4o --api-key sk-xxx --base-url https://api.openai.com/v1
+  python pdf_vlm_extract.py book.pdf --model qwen3.8-max --pages 0-20
 
 特性: 断点续传(已有 page 文件跳过)、失败重试、完成后自动合并 full_text.md
+支持: 任何 OpenAI 兼容接口的 VLM 模型（阿里云、OpenAI、SiliconFlow、本地部署等）
 """
 import argparse
 import base64
@@ -21,8 +23,8 @@ import pymupdf
 from PIL import Image
 
 DEFAULT_MODEL = 'qwen3.8-max'
-API_KEY_ENV = 'HERMES_CUSTOM_ALI_API_KEY'
-BASE_URL = 'https://token-plan.cn-beijing.maas.aliyuncs.com/compatible-mode/v1'
+DEFAULT_BASE_URL = 'https://token-plan.cn-beijing.maas.aliyuncs.com/compatible-mode/v1'
+DEFAULT_API_KEY_ENV = 'HERMES_CUSTOM_ALI_API_KEY'
 
 PROMPT = '''这是一本中文书籍的扫描页面。请将其完整转录为 Markdown：
 1. 正文文字：逐字转录，保留段落结构
@@ -46,7 +48,7 @@ def page_image_bytes(doc, idx, dpi=200, max_w=1100, quality=85):
     return buf.getvalue()
 
 
-def call_vlm(b64, model, timeout=300):
+def call_vlm(b64, model, base_url, api_key, timeout=300):
     payload = {
         'model': model,
         'messages': [{
@@ -56,15 +58,15 @@ def call_vlm(b64, model, timeout=300):
                 {'type': 'text', 'text': PROMPT},
             ],
         }],
-        'max_tokens': 8192,  # qwen3.8-max 是推理模型，reasoning_tokens 会占用此预算，必须给足
+        'max_tokens': 8192,
         'temperature': 0.1,
     }
     req = urllib.request.Request(
-        f'{BASE_URL}/chat/completions',
+        f'{base_url}/chat/completions',
         data=json.dumps(payload).encode(),
         headers={
             'Content-Type': 'application/json',
-            'Authorization': f'Bearer {os.environ[API_KEY_ENV]}',
+            'Authorization': f'Bearer {api_key}',
         },
     )
     with urllib.request.urlopen(req, timeout=timeout) as resp:
@@ -72,7 +74,7 @@ def call_vlm(b64, model, timeout=300):
     return data['choices'][0]['message']['content']
 
 
-def extract_page(doc, idx, out_dir, model, retries=2):
+def extract_page(doc, idx, out_dir, model, base_url, api_key, retries=2):
     out = os.path.join(out_dir, f'page_{idx + 1:03d}.md')
     if os.path.exists(out) and os.path.getsize(out) > 0:
         return 'skip'
@@ -83,7 +85,7 @@ def extract_page(doc, idx, out_dir, model, retries=2):
         return 'fail'
     for attempt in range(retries + 1):
         try:
-            text = call_vlm(b64, model)
+            text = call_vlm(b64, model, base_url, api_key)
             if text.strip():
                 with open(out, 'w', encoding='utf-8') as f:
                     f.write(text)
@@ -119,15 +121,22 @@ def merge(out_dir):
 
 
 def main():
-    ap = argparse.ArgumentParser(description='扫描版PDF -> 阿里VLM Markdown')
+    ap = argparse.ArgumentParser(description='扫描版PDF -> VLM Markdown（支持任意 OpenAI 兼容接口）')
     ap.add_argument('pdf', help='PDF 文件路径')
     ap.add_argument('-o', '--output', help='输出目录（默认: <pdf同目录>/<pdf名>_vlm/）')
-    ap.add_argument('--model', default=DEFAULT_MODEL)
+    ap.add_argument('--model', default=DEFAULT_MODEL, help=f'模型名称（默认: {DEFAULT_MODEL}）')
+    ap.add_argument('--base-url', default=None, help=f'API 端点（默认: 阿里云千问端点）')
+    ap.add_argument('--api-key', default=None, help=f'API Key（也可通过环境变量 {DEFAULT_API_KEY_ENV} 设置）')
     ap.add_argument('--pages', help='页码范围(0起始)，如 0-20 或单页 5')
     args = ap.parse_args()
 
-    if not os.environ.get(API_KEY_ENV):
-        sys.exit(f'缺少环境变量 {API_KEY_ENV}')
+    # 解析 base_url
+    base_url = args.base_url or DEFAULT_BASE_URL
+
+    # 解析 api_key：命令行参数 > 环境变量
+    api_key = args.api_key or os.environ.get(DEFAULT_API_KEY_ENV)
+    if not api_key:
+        sys.exit(f'缺少 API Key。请通过 --api-key 参数或环境变量 {DEFAULT_API_KEY_ENV} 提供。')
 
     doc = pymupdf.open(args.pdf)
     n = len(doc)
@@ -147,11 +156,12 @@ def main():
         out_dir = os.path.join(os.path.dirname(os.path.abspath(args.pdf)), base + '_vlm')
     os.makedirs(out_dir, exist_ok=True)
 
-    print(f'PDF: {args.pdf} ({n}页) | 处理 {len(idxs)} 页 | 模型: {args.model} | 输出: {out_dir}')
+    print(f'PDF: {args.pdf} ({n}页) | 处理 {len(idxs)} 页 | 模型: {args.model}')
+    print(f'API: {base_url} | 输出: {out_dir}')
     t0 = time.time()
     counts = {'ok': 0, 'skip': 0, 'fail': 0}
     for k, idx in enumerate(idxs):
-        r = extract_page(doc, idx, out_dir, args.model)
+        r = extract_page(doc, idx, out_dir, args.model, base_url, api_key)
         counts[r] += 1
         if r != 'skip':
             elapsed = time.time() - t0

@@ -162,6 +162,42 @@ python scripts/pdf_vlm_extract.py book.pdf --model qwen3.6-flash
 
 默认使用 `qwen3.8-max`（质量最高），备选 `qwen3.6-flash`（更快更便宜）。
 
+### 使用其他模型/服务商
+
+本工具**支持任何 OpenAI 兼容接口的 VLM 模型**，不限于阿里云千问。通过 `--base-url`、`--api-key`、`--model` 三个参数即可切换：
+
+```bash
+# OpenAI GPT-4o
+python scripts/pdf_vlm_extract.py book.pdf \
+  --model gpt-4o \
+  --api-key sk-*** \
+  --base-url https://api.openai.com/v1
+
+# SiliconFlow（千问开源模型）
+python scripts/pdf_vlm_extract.py book.pdf \
+  --model Qwen/Qwen2-VL-72B-Instruct \
+  --api-key *** \
+  --base-url https://api.siliconflow.cn/v1
+
+# 本地部署的模型（如 vLLM、Ollama）
+python scripts/pdf_vlm_extract.py book.pdf \
+  --model qwen2-vl \
+  --api-key dummy \
+  --base-url http://localhost:8000/v1
+```
+
+**API Key 优先级**：`--api-key` 参数 > `HERMES_CUSTOM_ALI_API_KEY` 环境变量。两者至少设置一个。
+
+| 服务商 | --base-url | --model | 备注 |
+|--------|-----------|---------|------|
+| 阿里云千问（默认） | 不需指定 | qwen3.8-max | 中文效果最好 |
+| OpenAI | `https://api.openai.com/v1` | gpt-4o | 通用能力强 |
+| SiliconFlow | `https://api.siliconflow.cn/v1` | Qwen/Qwen2-VL-72B-Instruct | 开源模型 |
+| 本地 vLLM | `http://localhost:8000/v1` | 自定义 | 需自行部署 |
+| 其他兼容接口 | 对应端点 | 对应模型名 | 需支持 vision |
+
+> **注意**：替换模型后效果可能不如默认的千问模型，详见上方"为什么选择千问模型"的实测对比。
+
 ## AI Agent 集成
 
 ### 示例：让 Agent 自动提取 PDF
