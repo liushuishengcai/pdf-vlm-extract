@@ -1,8 +1,8 @@
 # PDF VLM Extract
 
-**AI Agent 技能（Skill）**：扫描版 PDF → Markdown 智能提取工具，基于阿里云通义千问视觉大模型（Qwen-VL）。
+**PDF扫描文档基于视觉大模型智能提取Skill**：解决传统OCR无法识别图表的问题，让图表/K线图能被Agent识别，适合知识库及仓颉skill蒸馏。扫描版PDF→Markdown智能提取工具。
 
-专为图表密集型中文书籍设计，能完整提取文字、表格、K线图、示意图的语义信息，生成结构化 Markdown 文档。
+专为图表密集型中文书籍设计，能完整提取文字、表格、K线图、示意图的语义信息，生成结构化 Markdown 文档，供 AI Agent 直接学习和分析。
 
 ## 什么是 Skill？
 
@@ -347,6 +347,7 @@ MIT License - 详见 [LICENSE](LICENSE)
 
 ## 致谢
 
+- [cangjie-skill](https://github.com/kangarooking/cangjie-skill) - 仓颉skill蒸馏工具，为本项目提供了skill规范和蒸馏流程参考
 - [阿里云百炼](https://bailian.console.aliyun.com/) - 提供 Qwen-VL 模型服务
 - [PyMuPDF](https://pymupdf.readthedocs.io/) - PDF 处理库
 - [Hermes Agent](https://hermes-agent.nousresearch.com/) - 原始 skill 规范参考
