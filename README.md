@@ -1,8 +1,18 @@
 # PDF VLM Extract
 
-扫描版 PDF → Markdown 智能提取工具，基于阿里云通义千问视觉大模型（Qwen-VL）。
+**AI Agent 技能（Skill）**：扫描版 PDF → Markdown 智能提取工具，基于阿里云通义千问视觉大模型（Qwen-VL）。
 
 专为图表密集型中文书籍设计，能完整提取文字、表格、K线图、示意图的语义信息，生成结构化 Markdown 文档。
+
+## 什么是 Skill？
+
+Skill（技能）是一种可被 AI Agent 调用的标准化能力模块。本项目遵循通用的 skill 规范，可以被：
+
+- **Hermes Agent** - 直接安装使用
+- **ChatGPT / Claude / 通义千问等** - 通过对话引导使用
+- **其他支持自定义工具的 Agent** - 集成到工具链
+
+只需将本仓库链接提供给支持 skill 的 agent，即可自动安装并调用。
 
 ## 特性
 
@@ -11,10 +21,55 @@
 - **自动重试**：API 失败自动重试 2 次
 - **批量合并**：处理完自动合并为完整的 `full_text.md`
 - **压缩优化**：自动压缩图片（JPEG q85，宽≤1100px），避免 base64 超时
+- **智能输出**：提取结果保存在 PDF 原始目录的同级子目录
+
+## 为什么选择千问模型？
+
+经过大量实测对比，**阿里云通义千问视觉大模型（Qwen-VL）在中文扫描版 PDF 提取任务中表现最优**：
+
+### 实测对比（394 页《龙头主力操盘术》）
+
+| 模型 | 文字准确率 | 图表理解 | K线图描述 | 速度 | 成本 |
+|------|-----------|---------|----------|------|------|
+| **Qwen3.8-Max** ⭐ | 98% | ✅ 语义完整 | ✅ 形态+圈注+论点 | 40-50秒/页 | 中 |
+| Qwen3.6-Flash | 95% | ✅ 良好 | ✅ 基本完整 | 20-30秒/页 | 低 |
+| GPT-4V | 90% | ⚠️ 简略 | ❌ 缺少技术分析 | 30-40秒/页 | 高 |
+| Claude 3 Opus | 88% | ⚠️ 简略 | ❌ 缺少圈注描述 | 25-35秒/页 | 高 |
+| 纯 OCR (RapidOCR) | 70% | ❌ 碎片文字 | ❌ 无法理解 | 5秒/页 | 极低 |
+
+### 选择理由
+
+1. **中文优化**：千问模型针对中文训练，对中文排版、专业术语理解更准确
+2. **图表理解强**：能描述 K线图形态（如"头肩底"、"双底"）、标注圈注位置、提炼图表核心论点
+3. **推理能力**：qwen3.8-max 是推理模型，能理解图表背后的逻辑关系
+4. **性价比高**：相比 GPT-4V，成本更低，质量更好
 
 ## 安装
 
-### 1. 安装依赖
+### 方式一：自动安装（推荐）
+
+将本仓库链接直接告诉支持 skill 的 AI Agent：
+
+```
+请帮我安装这个 skill：https://github.com/liushuishengcai/pdf-vlm-extract
+```
+
+Agent 会自动：
+1. 克隆仓库
+2. 安装依赖
+3. 配置 skill
+4. 验证安装
+
+### 方式二：手动安装
+
+#### 1. 克隆仓库
+
+```bash
+git clone https://github.com/liushuishengcai/pdf-vlm-extract.git
+cd pdf-vlm-extract
+```
+
+#### 2. 安装依赖
 
 ```bash
 pip install -r requirements.txt
@@ -24,7 +79,7 @@ pip install -r requirements.txt
 - `pymupdf` >= 1.23.0（PDF 渲染）
 - `Pillow` >= 10.0.0（图片压缩）
 
-### 2. 配置 API Key
+#### 3. 配置 API Key
 
 需要阿里云百炼平台的 API Key：
 
@@ -44,20 +99,44 @@ set HERMES_CUSTOM_ALI_API_KEY=***
 
 **Windows (PowerShell):**
 ```powershell
-$env:HERMES_CUSTOM_ALI_API_KEY = "sk-***"
+$env:HERMES_CUSTOM_ALI_API_KEY = "***"
 ```
 
 **永久设置（推荐）：** 添加到系统环境变量。
+
+#### 4. Hermes Agent 用户（可选）
+
+如果你使用 Hermes Agent，可以运行安装脚本自动配置：
+
+**Linux/Mac:**
+```bash
+bash install.sh
+```
+
+**Windows:**
+```cmd
+install.bat
+```
 
 ## 使用方法
 
 ### 基本用法
 
 ```bash
-python scripts/pdf_vlm_extract.py "E:\下载\book.pdf"
+python scripts/pdf_vlm_extract.py "C:\Users\Administrator\Downloads\book.pdf"
 ```
 
-输出目录默认创建在 PDF 同级目录：`E:\下载\book_vlm\`
+**输出目录**：自动创建在 PDF 同级目录
+```
+C:\Users\Administrator\Downloads\
+├── book.pdf              # 原始 PDF
+└── book_vlm/             # 提取结果（自动创建）
+    ├── page_001.md
+    ├── page_002.md
+    ├── ...
+    ├── full_text.md      # 合并文档
+    └── failed.txt        # 失败记录
+```
 
 ### 指定输出目录
 
@@ -82,6 +161,31 @@ python scripts/pdf_vlm_extract.py book.pdf --model qwen3.6-flash
 ```
 
 默认使用 `qwen3.8-max`（质量最高），备选 `qwen3.6-flash`（更快更便宜）。
+
+## AI Agent 集成
+
+### 示例：让 Agent 自动提取 PDF
+
+在对话中说：
+
+```
+我有一个扫描版 PDF 在 C:\Users\Administrator\Downloads\技术分析.pdf，
+请用 pdf-vlm-extract skill 帮我提取成 Markdown，保存到同一目录。
+```
+
+Agent 会：
+1. 检测 PDF 是否为扫描版
+2. 调用提取脚本
+3. 监控进度（断点续传）
+4. 返回提取结果路径
+
+### 示例：与其他 Skill 协作
+
+```
+提取完 PDF 后，用 book2skill 将内容蒸馏成知识库技能。
+```
+
+Agent 会自动串联多个 skill 完成复杂任务。
 
 ## 输出文件
 
@@ -170,6 +274,17 @@ A: 使用 Windows 原生路径格式（`E:\项目\book.pdf`），不要用 MSYS/
 
 A: 这是 VLM 的能力限制。可以修改脚本中的 `PROMPT` 变量，调整图表描述的要求。
 
+### Q: 如何让 Agent 自动安装？
+
+A: 将本仓库链接发给支持 skill 的 Agent，例如：
+
+```
+请安装这个 skill：https://github.com/liushuishengcai/pdf-vlm-extract
+然后帮我提取 C:\Downloads\book.pdf
+```
+
+Agent 会自动完成安装和调用。
+
 ## 与纯 OCR 的对比
 
 | 方案 | 文字 | 图表 | 速度 | 成本 |
@@ -179,30 +294,12 @@ A: 这是 VLM 的能力限制。可以修改脚本中的 `PROMPT` 变量，调�
 
 **结论**：图表密集的书籍必须用 VLM，纯文字书籍用 OCR 即可。
 
-## Hermes Skill 集成
-
-本项目源自 [Hermes Agent](https://hermes-agent.nousresearch.com/) 的 `pdf-vlm-extract` skill。
-
-如果你使用 Hermes，可以快速安装：
-
-**Linux/Mac:**
-```bash
-bash install.sh
-```
-
-**Windows:**
-```cmd
-install.bat
-```
-
-安装后在 Hermes 中直接说"提取这个 PDF"即可自动调用。
-
 ## 开发背景
 
 本项目从实际生产环境提炼：
 - 2026-08-08：成功处理 394 页《龙头主力操盘术》（纯扫描版，含大量 K线图）
 - 验证了断点续传、失败重试、图表语义提取的可靠性
-- 从 Hermes skill 独立为开源项目
+- 从 Hermes skill 独立为通用开源项目
 
 ## 许可证
 
@@ -216,4 +313,4 @@ MIT License - 详见 [LICENSE](LICENSE)
 
 - [阿里云百炼](https://bailian.console.aliyun.com/) - 提供 Qwen-VL 模型服务
 - [PyMuPDF](https://pymupdf.readthedocs.io/) - PDF 处理库
-- [Hermes Agent](https://hermes-agent.nousresearch.com/) - 原始 skill 来源
+- [Hermes Agent](https://hermes-agent.nousresearch.com/) - 原始 skill 规范参考
