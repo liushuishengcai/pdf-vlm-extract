@@ -87,8 +87,7 @@ compatibility: [hermes, chatgpt, claude, qwen, custom-agents]
 ### 阿里云百炼（默认）
 
 ```bash
-# 端点（2026-08 用户工作空间端点，旧 token-plan 端点已弃用）
-https://ws-isq9pc74dqbn2mc6.cn-beijing.maas.aliyuncs.com/compatible-mode/v1
+# 端点：阿里云百炼控制台 → API-KEY 管理 → 获取专属 endpoint（形如 https://<workspace-id>.cn-beijing.maas.aliyuncs.com/compatible-mode/v1）
 # 模型名：qwen3.8-max（推荐）、qwen3-vl-plus（快）、qwen3-vl-flash、qwen-vl-max、qwen3.6-flash
 ```
 

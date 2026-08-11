@@ -123,12 +123,12 @@ install.bat
 ### 基本用法
 
 ```bash
-python scripts/pdf_vlm_extract.py "C:\Users\Administrator\Downloads\book.pdf"
+python scripts/pdf_vlm_extract.py "C:\Users\<用户名>\Downloads\book.pdf"
 ```
 
 **输出目录**：自动创建在 PDF 同级目录
 ```
-C:\Users\Administrator\Downloads\
+C:\Users\<用户名>\Downloads\
 ├── book.pdf              # 原始 PDF
 └── book_vlm/             # 提取结果（自动创建）
     ├── page_001.md
@@ -231,7 +231,7 @@ python scripts/pdf_vlm_extract.py book.pdf \
 在对话中说：
 
 ```
-我有一个扫描版 PDF 在 C:\Users\Administrator\Downloads\技术分析.pdf，
+我有一个扫描版 PDF 在 C:\Users\<用户名>\Downloads\技术分析.pdf，
 请用 pdf-vlm-extract skill 帮我提取成 Markdown，保存到同一目录。
 ```
 
