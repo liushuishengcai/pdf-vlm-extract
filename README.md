@@ -152,6 +152,12 @@ python scripts/pdf_vlm_extract.py book.pdf --pages 0-19
 
 # 只处理第 5 页
 python scripts/pdf_vlm_extract.py book.pdf --pages 5
+
+# 处理第 5、14 页（逗号列表，v1.3.0+）
+python scripts/pdf_vlm_extract.py book.pdf --pages 4,13
+
+# 混合：第 5-7 页和第 14 页
+python scripts/pdf_vlm_extract.py book.pdf --pages 4-6,13
 ```
 
 ### 指定模型
@@ -161,6 +167,26 @@ python scripts/pdf_vlm_extract.py book.pdf --model qwen3.6-flash
 ```
 
 默认使用 `qwen3.8-max`（质量最高），备选 `qwen3.6-flash`（更快更便宜）。
+
+### 配置管理（v1.2.0+）
+
+首次使用或想切换模型时，可通过交互式命令配置 URL / API Key / 模型，配置持久化保存在 `~/.pdf-vlm-extract.json`：
+
+```bash
+# 交互式配置（首次使用）
+python scripts/pdf_vlm_extract.py --configure
+
+# 查看当前配置（API Key 自动打码）
+python scripts/pdf_vlm_extract.py --show-config
+
+# 切换模型（保留 URL 和 Key）
+python scripts/pdf_vlm_extract.py --set-model gpt-4o
+
+# 也可用管道一次性写入（Agent 自动化）
+printf '%s\n' '<url>' '<api_key>' '<model>' | python scripts/pdf_vlm_extract.py --configure
+```
+
+参数优先级：命令行参数 > 配置文件 > 环境变量 `HERMES_CUSTOM_ALI_API_KEY` > 默认值。
 
 ### 使用其他模型/服务商
 
