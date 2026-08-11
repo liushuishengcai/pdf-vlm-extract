@@ -33,8 +33,7 @@ compatibility: [hermes, chatgpt, claude, qwen, custom-agents]
 | ✅ SiliconFlow Qwen3-VL-32B-Instruct/Thinking | 详细但盘口简略；Thinking 结构最规范 |
 | ✅ SiliconFlow GLM-4.5V | 极简要点式，21s/页，无幻觉 |
 | ✅ 任意 OpenAI 兼容端点 | v1.1.0 起支持 `--base-url`/`--api-key` 直连（阿里/SiliconFlow/Nous Portal/OpenAI/本地） |
-| ❌ 纯 OCR (RapidOCR) | 图表区输出碎片乱序文字，不可用于图表密集书籍 |
-| ❌ GPT-4V / Claude（旧版） | 中文图表理解弱于千问，成本更高 |
+| ❌ 纯 OCR (RapidOCR) | 图表区输出碎片乱序文字，不可用于图表密集书籍（实测） |
 
 ## 模型实测对比（2026-08-11，两本书 8 页 × 16 模型）
 
