@@ -44,6 +44,56 @@ Skill（技能）是一种可被 AI Agent 调用的标准化能力模块。本�
 3. **推理能力**：qwen3.8-max 是推理模型，能理解图表背后的逻辑关系
 4. **性价比高**：相比 GPT-4V，成本更低，质量更好
 
+
+
+## 跨平台模型实测（2026-08-11）
+
+基于两本扫描书 8 页 × 16 个视觉模型的真实提取测试（阿里云百炼 / SiliconFlow / Nous Portal 三平台），对比速度、token 消耗与精度：
+
+### 速度与 token 消耗（单页）
+
+| 模型 | 平台 | 耗时/页 | tokens/页 |
+|------|------|------|------|
+| muse-spark-1.2 | Nous | 16s | ~4.6K |
+| gpt-5.6-terra | Nous | 13s | ~3.4K |
+| gemini-3.6-flash | Nous | 20s | ~5.1K |
+| claude-opus-4.7 | Nous | 26s | ~3.7K |
+| grok-4.5 | Nous | 34s | ~3.9K |
+| gpt-5.6-terra-pro | Nous | 38s | ~21K ⚠️ |
+| GLM-4.5V | SiliconFlow | 21s | ~1K |
+| Kimi-K2.7-Code | SiliconFlow | 18s | ~1K |
+| Qwen3-VL-32B-Thinking | SiliconFlow | 39s | ~2K |
+| Qwen3-VL-32B-Instruct | SiliconFlow | 52s | ~1.5K |
+| qwen3-vl-plus | ALI | 12s | ~2K |
+| **qwen3.8-max** | ALI/Nous | 69-120s | 7-8K |
+| doubao-seed-2.0-lite | Nous | 49s | ~4.9K |
+| gpt-5.6-sol | Nous | 56s | ~4.8K |
+
+### 精度实测
+
+| 模型 | 正文转录 | 图注 | 点位/细节 | 幻觉情况 |
+|------|------|------|------|------|
+| **claude-opus-4.7** | ✅ | ✅ 带日期 | 🥇 最全（全点位+博文时间戳） | 无 |
+| **qwen3.8-max** | ✅ | ✅ 规范 | 🥇 最全（点位链+时间戳+盘口数字） | 无 |
+| **kimi-k3** | ✅ | ✅ 最详细 | 🥇 详尽（点位+圈注+时间戳） | 无 |
+| gemini-3.6-flash | ⚠️ 偶错字 | ✅ | 详细 | 博文标题 2 处幻觉 |
+| doubao-seed-2.0-lite | ✅ | ⚠️ 模板化 | 详细 | 无 |
+| muse-spark-1.2 | ✅ | ❌ 正文当图注 | 中 | 无 |
+| gpt-5.6-terra / terra-pro | ✅ | ❌ 写"无" | 中 | 无 |
+| grok-4.5 | ✅ | ❌ 写"无" | 中 | 输出包代码块 |
+| Kimi-K2.7-Code | ✅ | ✅ | 简洁概括 | 无（保守不编造） |
+| GLM-4.5V | ✅ | ✅ | 极简要点 | 无 |
+| **gpt-5.6-sol** | ⚠️ 错字 | ❌ | ❌ | 🔥 严重幻觉：把上证指数认成纳斯达克 |
+| **Qwen3-Omni-30B-A3B** | ❌ | ❌ | ❌ | 🔥 编造整篇正文（转录任务禁用） |
+
+### 选型结论
+
+- **精度首选**：claude-opus-4.7（Nous）/ qwen3.8-max（阿里百炼，默认）
+- **速度省钱**：muse-spark-1.2 / gemini-3.6-flash / Kimi-K2.7-Code / qwen3-vl-plus
+- **禁用**：gpt-5.6-sol（幻觉重灾区）、Qwen3-Omni（编造正文）
+- **token 规律**：推理模型（qwen3.8-max、terra-pro）思考 token 计入预算，terra-pro 单页可达 21K，是普通模型 4-6 倍
+- **非视觉模型勿用**：GLM-5.2、MiniMax-M2.5、LongCat-2.0、Ling-flash-2.0、qwen3.7-max、deepseek-v4-pro
+
 ## 安装
 
 ### 方式一：自动安装（推荐）
@@ -216,9 +266,10 @@ python scripts/pdf_vlm_extract.py book.pdf \
 
 | 服务商 | --base-url | --model | 备注 |
 |--------|-----------|---------|------|
-| 阿里云千问（默认） | 不需指定 | qwen3.8-max | 中文效果最好 |
+| 阿里云百炼（默认） | 百炼控制台获取专属端点 | qwen3.8-max | 中文效果最好，精度首选 |
 | OpenAI | `https://api.openai.com/v1` | gpt-4o | 通用能力强 |
-| SiliconFlow | `https://api.siliconflow.cn/v1` | Qwen/Qwen2-VL-72B-Instruct | 开源模型 |
+| SiliconFlow | `https://api.siliconflow.cn/v1` | Qwen/Qwen3-VL-32B-Instruct | 开源模型，便宜 |
+| Nous Portal | `https://inference-api.nousresearch.com/v1` | openai/gpt-5.6-terra 等 | OAuth 订阅制，模型最全 |
 | 本地 vLLM | `http://localhost:8000/v1` | 自定义 | 需自行部署 |
 | 其他兼容接口 | 对应端点 | 对应模型名 | 需支持 vision |
 
@@ -273,7 +324,10 @@ book_vlm/
 
 | 模型 | 速度 | 394 页预估时间 | 成本 |
 |------|------|----------------|------|
-| qwen3.8-max | ~40-50秒/页 | ~4.5 小时 | 较高 |
+| qwen3.8-max | ~69-120秒/页 | ~8-13 小时 | 较高 |
+| qwen3-vl-plus | ~12秒/页 | ~1.3 小时 | 低 |
+| Kimi-K2.7-Code | ~18秒/页 | ~2 小时 | 低 |
+| GLM-4.5V | ~21秒/页 | ~2.3 小时 | 低 |
 | qwen3.6-flash | ~20-30秒/页 | ~2.5 小时 | 较低 |
 
 **建议**：先用 `--pages 0-4` 测试 5 页，确认效果后再跑全量。
@@ -302,7 +356,7 @@ book_vlm/
 
 ### API 配置
 
-- 端点：`https://token-plan.cn-beijing.maas.aliyuncs.com/compatible-mode/v1`
+- 端点：阿里云百炼控制台 → API-KEY 管理 → 获取专属 endpoint（形如 `https://<workspace-id>.cn-beijing.maas.aliyuncs.com/compatible-mode/v1`）
 - max_tokens：8192（qwen3.8-max 是推理模型，reasoning_tokens 占用预算）
 - temperature：0.1（转录任务需要低温保证准确性）
 
